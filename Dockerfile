@@ -1,4 +1,5 @@
-FROM python:3.13-slim
+# FROM python:3.13-slim
+FROM python:3.12-bullseye
 
 WORKDIR /app
 
@@ -12,4 +13,6 @@ RUN playwright install-deps
 RUN playwright install
 RUN chmod -R 777 /root
 RUN chmod -R 777 /app
+
+EXPOSE 7860
 CMD ["python", "main.py"]

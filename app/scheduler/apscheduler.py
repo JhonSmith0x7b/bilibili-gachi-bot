@@ -3,6 +3,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from tg import TgBot
 import asyncio
 from crawler import PyWrightCrawler
+import os
 
 
 class BotPushScheduler():
@@ -11,7 +12,7 @@ class BotPushScheduler():
         self.scheduler = BackgroundScheduler()
         self.scheduler.add_job(
             self.push_schedule_task,
-            trigger=IntervalTrigger(minutes=1),
+            trigger=IntervalTrigger(minutes=int(os.environ['CRAWL_INTERVAL_MIN'])),
             args=[bot_instance],
             id="push_message_job",
             replace_existing=True
