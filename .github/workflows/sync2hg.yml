@@ -1,0 +1,24 @@
+name: Sync to Hg
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      - name: Push to Hg
+        env:
+          # https://hf_{your_token}@huggingface.co/{username}/{repo_name}
+          HG_URL: ${{ secrets.HG_URL }}
+        run: |
+          git remote set-url origin ${HG_URL} 
+          git push --force origin HEAD:main
