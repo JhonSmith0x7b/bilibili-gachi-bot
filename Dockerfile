@@ -15,4 +15,4 @@ RUN chmod -R 777 /root
 RUN chmod -R 777 /app
 
 EXPOSE 7860
-CMD ["python", "main.py"]
+CMD python -m http.server 7860 & python main.py

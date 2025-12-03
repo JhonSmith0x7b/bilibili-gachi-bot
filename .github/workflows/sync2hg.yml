@@ -17,7 +17,7 @@ jobs:
 
       - name: Push to Hg
         env:
-          # https://hf_{your_token}@huggingface.co/{username}/{repo_name}
+          # https://Kyon0X3C8B:${HF_TOKEN}@huggingface.co/spaces/Kyon0x3C8B/bilibili-gachi-bot
           HG_URL: ${{ secrets.HG_URL }}
         run: |
           git remote set-url origin ${HG_URL} 
