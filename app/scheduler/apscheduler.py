@@ -4,6 +4,7 @@ from tg import TgBot
 import asyncio
 from crawler import PyWrightCrawler
 import os
+import logging
 
 
 class BotPushScheduler():
@@ -22,7 +23,10 @@ class BotPushScheduler():
 
     def push_schedule_task(self, bot_instance: TgBot):
         message = self.crawler.get_new()
-        asyncio.run(bot_instance.send_push_message(message))
+        if message is None or message == '':
+            logging.info("No new messages to push.")
+        else:
+            asyncio.run(bot_instance.send_push_message(message))
 
 
     def start(self) -> None:

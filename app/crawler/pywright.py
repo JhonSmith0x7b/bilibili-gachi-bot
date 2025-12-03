@@ -26,8 +26,6 @@ class PyWrightCrawler():
         re_messages = []
         for uid in self.bilibili_uids:
             result = asyncio.run(self.fetch_bilibili_dynamic_data(uid))
-            if len(result) < 1:
-                continue
             new_data = [f"https://space.bilibili.com/{uid}/dynamic"]
             cache = self.cache_dict[uid]
             for row in result:
@@ -35,6 +33,8 @@ class PyWrightCrawler():
                     continue
                 new_data.append(row)
                 cache.append(row)
+            if len(new_data) < 2:
+                continue
             self.cache_dict[uid] = cache
             re_messages.append("\n\n".join(new_data))
         return "\n\n\n".join(re_messages)
@@ -91,12 +91,22 @@ class PyWrightCrawler():
                     video_title = self.pick_text(
                         div, "div.bili-dyn-card-video__title")
                     parts.append(video_title)
+                    live_title = self.pick_text(
+                        div, "div.bili-dyn-card-live__title"
+                    )
+                    if live_title is not None and live_title != "":
+                        parts.append(f"LIVE! {live_title}")
                     re_list.append(" -- ".join(filter(str.strip, parts)))
                 return re_list
         except Exception as e:
             logging.error(f"Error fetching Bilibili dynamic data: {e}")
             traceback.print_exc()
             return []
+        finally: 
+            try:
+                await browser.close()
+            except Exception as e:
+                pass
 
     def pick_text(self, div: Tag, selector: str) -> str:
         text = div.select(selector)
