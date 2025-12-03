@@ -8,5 +8,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY ./app /app/
+RUN playwright install-deps
+RUN playwright install
+RUN chmod -R 777 /root
 RUN chmod -R 777 /app
 CMD ["python", "main.py"]
