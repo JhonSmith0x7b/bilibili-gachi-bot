@@ -19,14 +19,21 @@ class BotPushScheduler():
             replace_existing=True
         )
         self.crawler = PyWrightCrawler()
+        self.pre_fail = ""
         
 
     def push_schedule_task(self, bot_instance: TgBot):
         message = self.crawler.get_new()
-        if message is None or message == '':
+        if self.pre_fail == "" or message is None or message == '':
             logging.info("No new messages to push.")
         else:
-            asyncio.run(bot_instance.send_push_message(message))
+            message = f"{self.pre_fail}\n{message}"
+            logging.info(f"Pushing message: {message}")
+            result = asyncio.run(bot_instance.send_push_message(message))
+            if not result:
+                self.pre_fail = message
+            else:
+                self.pre_fail = ""
 
 
     def start(self) -> None:

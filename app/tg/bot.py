@@ -37,12 +37,14 @@ class TgBot():
             re_message = "Registration failed. You might be already registered."
         await update.message.reply_text(re_message)  # type: ignore
 
-    async def send_push_message(self, message: str) -> None:
+    async def send_push_message(self, message: str) -> bool:
         for chat_id in self.user_chat_ids:
             try:
                 await self.app.bot.send_message(chat_id=chat_id, text=message[:500])
             except Exception as e:
-                print(f"Failed to send message to {chat_id}: {e}")
+                logging.error(f"Failed to send message to {chat_id}: {e}")
+                return False
+        return True
 
     def run(self) -> None:
         self.app.run_polling()
