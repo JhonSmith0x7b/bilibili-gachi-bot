@@ -24,7 +24,7 @@ class BotPushScheduler():
 
     def push_schedule_task(self, bot_instance: TgBot):
         message = self.crawler.get_new()
-        if self.pre_fail == "" or message is None or message == '':
+        if self.pre_fail == "" and (message is None or message == ''):
             logging.info("No new messages to push.")
         else:
             message = f"{self.pre_fail}\n{message}"
