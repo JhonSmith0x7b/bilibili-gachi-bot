@@ -6,6 +6,7 @@ from collections import deque
 import os
 from typing import Iterable, List
 import traceback
+import time
 
 
 class PyWrightCrawler():
@@ -36,8 +37,9 @@ class PyWrightCrawler():
             if len(new_data) < 2:
                 continue
             self.cache_dict[uid] = cache
-            re_messages.append("\n\n".join(new_data))
-        return "\n---\n".join(re_messages)
+            re_messages.append("\n-----------------\n".join(new_data))
+            time.sleep(3)
+        return "\n\n\n".join(re_messages)
 
     async def fetch_bilibili_dynamic_data(self, uid: str) -> List[str]:
         try:
