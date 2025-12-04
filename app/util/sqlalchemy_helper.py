@@ -28,7 +28,7 @@ class SqlalchemyHelper():
     def add_bot_user(self, obj: BotUser) -> bool:
         session = self.session()
         try:
-            session.add(obj)
+            session.merge(obj)
             session.commit()
             return True
         except Exception as e:
