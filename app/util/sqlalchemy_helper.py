@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import create_engine, Column, Integer, String, Index
+from sqlalchemy import create_engine, Column, Integer, String, Index, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from typing import Iterable
@@ -14,7 +14,7 @@ class BotUser(Base):
     name = Column(String(128), nullable=False)
     chat_id = Column(String(128), nullable=False)
     __table_args__ = (
-        Index('idx_name_chat_id', 'name', 'chat_id'), 
+        UniqueConstraint('name', 'chat_id', name='unique_name_chat_id'), 
     )
 
 
