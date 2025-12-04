@@ -37,7 +37,7 @@ class PyWrightCrawler():
                 continue
             self.cache_dict[uid] = cache
             re_messages.append("\n\n".join(new_data))
-        return "\n\n\n".join(re_messages)
+        return "\n---\n".join(re_messages)
 
     async def fetch_bilibili_dynamic_data(self, uid: str) -> List[str]:
         try:
