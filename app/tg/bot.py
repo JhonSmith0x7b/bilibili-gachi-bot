@@ -3,6 +3,7 @@ from telegram import Update
 from telegram import ext
 from util import SqlalchemyHelper, BotUser
 import logging
+import tenacity
 
 
 class TgBot():
@@ -37,6 +38,10 @@ class TgBot():
             re_message = "Registration failed. You might be already registered."
         await update.message.reply_text(re_message)  # type: ignore
 
+    @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(2),
+                    retry=tenacity.retry_if_result(lambda result: result is False), before_sleep=lambda retry_state: logging.warning(
+        f"Push failed, retrying in 3s... (Attempt {retry_state.attempt_number})"
+    ))
     async def send_push_message(self, message: str) -> bool:
         for chat_id in self.user_chat_ids:
             try:

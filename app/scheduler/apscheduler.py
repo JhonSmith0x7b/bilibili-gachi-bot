@@ -19,7 +19,7 @@ class BotPushScheduler():
             replace_existing=True
         )
         self.crawler = PyWrightCrawler()
-        self.pre_fail = ""
+        self.pre_fail = "1"
         
 
     def push_schedule_task(self, bot_instance: TgBot):
@@ -31,6 +31,7 @@ class BotPushScheduler():
             logging.info(f"Pushing message: {message}")
             result = asyncio.run(bot_instance.send_push_message(message))
             if not result:
+                logging.error("Failed to push message, will try again next time.")
                 self.pre_fail = message
             else:
                 self.pre_fail = ""
