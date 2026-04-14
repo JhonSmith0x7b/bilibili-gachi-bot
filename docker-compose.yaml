@@ -1,0 +1,29 @@
+services:
+  napcat:
+    image: mlikiowa/napcat-docker:v4.17.55
+    container_name: napcat
+    restart: always
+    mac_address: 02:42:ac:11:00:02
+    environment:
+      - ACCOUNT=${QQBOT_ACCOUNT}
+    ports:
+      - 3000:3000
+      - 3001:3001
+      - 6099:6099
+    volumes:
+      - ./napcat/config:/app/napcat/config
+      - ./ntqq:/app/.config/QQ
+
+  bot:
+    build: .
+    container_name: bilibili-gachi-bot
+    restart: always
+    environment:
+      - BOT_TYPE=napcat
+      - NAPCAT_API_BASE_URL=http://napcat:3000
+      - NAPCAT_API_TOKEN=${NAPCAT_API_TOKEN}
+      - NAPCAT_GROUP_IDS=${NAPCAT_GROUP_IDS}
+      - BILIBILI_UIDS=${BILIBILI_UIDS}
+      - CRAWL_INTERVAL_MIN=${CRAWL_INTERVAL_MIN}
+    depends_on:
+      - napcat
