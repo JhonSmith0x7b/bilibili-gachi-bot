@@ -19,17 +19,19 @@ class PyWrightCrawler():
             error = "BILIBILI_UIDS is not set or empty."
             logging.error(error)
             raise Exception(error)
+
+    async def async_init(self):
         for uid in self.bilibili_uids:
-            result = asyncio.run(self.fetch_bilibili_dynamic_data(uid))
+            result = await self.fetch_bilibili_dynamic_data(uid)
             self.cache_dict[uid] = deque(result, maxlen=30)
         logging.info(f"cache is \n{str(self.cache_dict)}")
 
-    def get_new(self) -> str:
+    async def get_new(self) -> str:
         re_messages = []
         for uid in self.bilibili_uids:
-            result = asyncio.run(self.fetch_bilibili_dynamic_data(uid))
+            result = await self.fetch_bilibili_dynamic_data(uid)
             new_data = [f"https://space.bilibili.com/{uid}/dynamic"]
-            cache = self.cache_dict[uid]
+            cache = self.cache_dict.get(uid, deque(maxlen=30))
             for row in result:
                 if row is None or row in new_data or row in cache:
                     continue
@@ -39,7 +41,7 @@ class PyWrightCrawler():
                 continue
             self.cache_dict[uid] = cache
             re_messages.append("\n-----------------\n".join(new_data))
-            time.sleep(3)
+            await asyncio.sleep(3)
         return "\n\n\n".join(re_messages)
 
     async def fetch_bilibili_dynamic_data(self, uid: str) -> List[str]:
