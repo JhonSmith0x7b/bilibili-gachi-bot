@@ -1,9 +1,9 @@
-name: Sync to Hg
+name: Sync to HF
 
 on:
   push:
     branches:
-      - hg
+      - hf
 
 jobs:
   sync:
@@ -18,7 +18,7 @@ jobs:
       - name: Push to Hg
         env:
           # https://Kyon0X3C8B:${HF_TOKEN}@huggingface.co/spaces/Kyon0x3C8B/bilibili-gachi-bot
-          HG_URL: ${{ secrets.HG_URL }}
+          HG_URL: ${{ secrets.HF_URL }}
         run: |
-          git remote set-url origin ${HG_URL} 
+          git remote set-url origin ${HF_URL} 
           git push --force origin HEAD:main
