@@ -3,7 +3,7 @@ name: Sync to Hg
 on:
   push:
     branches:
-      - main
+      - hg
 
 jobs:
   sync:
