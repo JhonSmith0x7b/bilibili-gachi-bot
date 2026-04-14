@@ -1,18 +1,17 @@
-from tg import TgBot
 from crawler import PyWrightCrawler
 import os
 import logging
-from telegram import ext
+import typing
 
 
 class BotPushScheduler():
 
-    def __init__(self, bot_instance: TgBot):
+    def __init__(self, bot_instance: typing.Any):
         self.bot_instance = bot_instance
         self.crawler = PyWrightCrawler()
         self.pre_fail = ""
         
-    async def init_task(self, context: ext.ContextTypes.DEFAULT_TYPE):
+    async def init_task(self, context: typing.Any = None):
         logging.info("Initializing crawler cache...")
         await self.crawler.async_init()
         logging.info("Crawler cache initialized. Starting scheduled push task.")
@@ -25,7 +24,7 @@ class BotPushScheduler():
             name="push_message_job"
         )
 
-    async def push_schedule_task(self, context: ext.ContextTypes.DEFAULT_TYPE):
+    async def push_schedule_task(self, context: typing.Any = None):
         message = await self.crawler.get_new()
         if self.pre_fail == "" and (message is None or message == ''):
             logging.info("No new messages to push.")

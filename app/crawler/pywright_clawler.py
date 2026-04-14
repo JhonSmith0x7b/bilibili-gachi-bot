@@ -24,6 +24,7 @@ class PyWrightCrawler():
         for uid in self.bilibili_uids:
             result = await self.fetch_bilibili_dynamic_data(uid)
             self.cache_dict[uid] = deque(result, maxlen=30)
+            await asyncio.sleep(5)
         logging.info(f"cache is \n{str(self.cache_dict)}")
 
     async def get_new(self) -> str:
@@ -41,7 +42,7 @@ class PyWrightCrawler():
                 continue
             self.cache_dict[uid] = cache
             re_messages.append("\n-----------------\n".join(new_data))
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
         return "\n\n\n".join(re_messages)
 
     async def fetch_bilibili_dynamic_data(self, uid: str) -> List[str]:
