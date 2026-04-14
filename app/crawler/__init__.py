@@ -1,1 +1,1 @@
-from .pywright import PyWrightCrawler
+from .pywright_clawler import PyWrightCrawler

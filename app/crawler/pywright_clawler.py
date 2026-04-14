@@ -1,4 +1,5 @@
 from playwright.async_api import async_playwright
+from playwright_stealth import Stealth
 from bs4 import BeautifulSoup, Tag
 import logging
 import asyncio
@@ -44,7 +45,7 @@ class PyWrightCrawler():
     async def fetch_bilibili_dynamic_data(self, uid: str) -> List[str]:
         try:
             url = f"https://space.bilibili.com/{uid}/dynamic"
-            async with async_playwright() as p:
+            async with Stealth().use_async(async_playwright()) as p:
                 launch_options = {
                     "headless": True,
                     "args": [
@@ -53,8 +54,7 @@ class PyWrightCrawler():
                         "--disable-dev-shm-usage",
                         "--disable-blink-features=AutomationControlled",
                         "--disable-extensions",
-                        "--disable-infobars",
-                        "--start-maximized"
+                        "--disable-infobars"
                     ]
                 }
                 browser = await p.chromium.launch(**launch_options)
@@ -63,20 +63,21 @@ class PyWrightCrawler():
                     device_scale_factor=1,
                     is_mobile=False,
                     has_touch=False,
-                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+                    locale="zh-CN",
+                    timezone_id="Asia/Shanghai",
+                    permissions=["geolocation"],
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
                 )
-                await context.add_init_script("""
-                    Object.defineProperty(navigator, 'webdriver', {
-                        get: () => undefined
-                    });
-                    // disable WebGL
-                    WebGLRenderingContext.prototype.getParameter = () => null;
-                    WebGL2RenderingContext.prototype.getParameter = () => null;
-                """)
                 page = await context.new_page()
+                
                 await page.goto(url)
+                # simulate human wait and small scroll
+                await asyncio.sleep(2)
+                await page.mouse.wheel(0, 500)
                 await page.wait_for_load_state("networkidle")
+                
                 content = await page.content()
+                logging.info(f"Fetched dynamic for {uid}, content length: {len(content)}")
                 await browser.close()
                 # pick dynamic
                 soup = BeautifulSoup(content, "html.parser")
