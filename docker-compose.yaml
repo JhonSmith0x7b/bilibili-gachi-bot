@@ -1,18 +1,18 @@
 services:
-  napcat:
-    image: mlikiowa/napcat-docker:v4.17.55
-    container_name: napcat
-    restart: always
-    mac_address: 02:42:ac:11:00:02
-    environment:
-      - ACCOUNT=${QQBOT_ACCOUNT}
-    ports:
-      - 3000:3000
-      - 3001:3001
-      - 6099:6099
-    volumes:
-      - ./napcat/config:/app/napcat/config
-      - ./ntqq:/app/.config/QQ
+  # napcat:
+  #   image: mlikiowa/napcat-docker:v4.17.55
+  #   container_name: napcat
+  #   restart: always
+  #   mac_address: 02:42:ac:11:00:02
+  #   environment:
+  #     - ACCOUNT=${QQBOT_ACCOUNT}
+  #   ports:
+  #     - 3000:3000
+  #     - 3001:3001
+  #     - 6099:6099
+  #   volumes:
+  #     - ./napcat/config:/app/napcat/config
+  #     - ./ntqq:/app/.config/QQ
 
   bot:
     build: .
@@ -22,8 +22,11 @@ services:
       - BOT_TYPE=napcat
       - NAPCAT_API_BASE_URL=http://napcat:3000
       - NAPCAT_API_TOKEN=${NAPCAT_API_TOKEN}
-      - NAPCAT_GROUP_IDS=${NAPCAT_GROUP_IDS}
-      - BILIBILI_UIDS=${BILIBILI_UIDS}
+      - BILIBILI_ROOM_GROUP_BINDINGS=${BILIBILI_ROOM_GROUP_BINDINGS}
       - CRAWL_INTERVAL_MIN=${CRAWL_INTERVAL_MIN}
-    depends_on:
-      - napcat
+      - CRAWLER_TYPE=${CRAWLER_TYPE}
+      - QQBOT_ACCOUNT=${QQBOT_ACCOUNT}
+      - BILIBILI_API_TIMEOUT=${BILIBILI_API_TIMEOUT}
+      - BILIBILI_API_MAX_RETRIES=${BILIBILI_API_MAX_RETRIES}
+      - BILIBILI_API_RETRY_DELAY=${BILIBILI_API_RETRY_DELAY}
+      - BILIBILI_BUVID3=${BILIBILI_BUVID3}

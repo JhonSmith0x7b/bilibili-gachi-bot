@@ -5,17 +5,14 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 from scheduler import BotPushScheduler
 import os
+from bot import NapcatBot
 
 
 def main() -> None:
-    bot_type = os.environ.get('BOT_TYPE', 'tg').lower()
+    bot_type = os.environ.get('BOT_TYPE', 'napcat').lower()
     
-    if bot_type == 'napcat':
-        from bot.qq.bot import NapcatBot
+    if bot_type == 'napcat' or True:
         bot = NapcatBot()
-    else:
-        from bot.tg import TgBot
-        bot = TgBot()
 
     bot_push_scheduler = BotPushScheduler(bot)
     bot_push_scheduler.start()

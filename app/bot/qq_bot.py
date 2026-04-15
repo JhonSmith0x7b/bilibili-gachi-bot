@@ -2,6 +2,8 @@ import asyncio
 import os
 import logging
 import httpx
+from config import get_live_room_group_bindings
+from model import Message
 
 
 class NapcatJobQueue:
@@ -43,14 +45,14 @@ class NapcatBot:
         self.app = MockApp(self.loop)   
         self.base_url = os.environ.get('NAPCAT_API_BASE_URL', 'http://127.0.0.1:3000').rstrip('/')
         self.token = os.environ.get('NAPCAT_API_TOKEN', '')
-        group_ids_str = os.environ.get('NAPCAT_GROUP_IDS', '')
-        self.group_ids = [gid.strip() for gid in group_ids_str.split(',') if gid.strip()]
+        self.room_group_bindings = get_live_room_group_bindings()
         
-        logging.info(f"Loaded {len(self.group_ids)} Napcat group IDs from config.")
+        logging.info(f"Loaded Napcat bindings for {len(self.room_group_bindings)} room(s).")
 
-    async def send_push_message(self, message: str) -> bool:
-        if not self.group_ids:
-            logging.warning("No NAPCAT_GROUP_IDS configured. Skipping push message.")
+    async def send_push_message(self, room_id: str, message: Message) -> bool:
+        group_targets = self.room_group_bindings.get(room_id, [])
+        if not group_targets:
+            logging.warning(f"No bound Napcat group IDs configured for room {room_id}. Skipping push message.")
             return True
             
         success = True
@@ -61,14 +63,18 @@ class NapcatBot:
             if self.token:
                 headers["Authorization"] = f"Bearer {self.token}"
                 
-            for group_id in self.group_ids:
+            for group_target in group_targets:
+                segments = []
+                if group_target["at_all"]:
+                    segments.append({"type": "at", "data": {"qq": "all"}})
+                if message.image:
+                    segments.append({"type": "image", "data": {"file": message.image}})
+                segments.append({"type": "text", "data": {"text": message.content[:500]}})
+
                 payload = {
                     "message_type": "group",
-                    "group_id": group_id,
-                    "message": [
-                        {"type": "at", "data": {"qq": "all"}},
-                        {"type": "text", "data": {"text": f" {message[:500]}"}}
-                    ]
+                    "group_id": group_target["group_id"],
+                    "message": segments,
                 }
                 try:
                     response = await client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
@@ -76,7 +82,7 @@ class NapcatBot:
                         logging.error(f"Napcat send failed: {response.status_code} {response.text}")
                         success = False
                 except Exception as e:
-                    logging.error(f"Failed to send message to group {group_id}: {e}")
+                    logging.error(f"Failed to send message to group {group_target['group_id']} for room {room_id}: {e}")
                     success = False
         return success
 
