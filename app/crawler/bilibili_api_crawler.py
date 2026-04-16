@@ -66,7 +66,7 @@ class BilibiliApiCrawler:
                 logging.error(f"Error initializing state for Room {room_id}: {e}")
 
     async def get_new(self) -> List[Tuple[str, str, Message]]:
-        semaphore = asyncio.Semaphore(3)  # Limit concurrency to 3
+        semaphore = asyncio.Semaphore(2)  # Limit concurrency to 2
         
         async def _process_room(room_id: str) -> Optional[Tuple[str, str, Message]]:
             async with semaphore:

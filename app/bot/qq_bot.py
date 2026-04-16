@@ -84,6 +84,7 @@ class NapcatBot:
             except Exception as e:
                 logging.error(f"Failed to send message to group {group_target['group_id']} for room {room_id}: {e}")
                 success = False
+            await asyncio.sleep(2)
         return success
 
     async def send_group_message(self, group_id: str, message: Message) -> bool:
