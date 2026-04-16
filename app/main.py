@@ -11,7 +11,9 @@ from bot import NapcatBot
 def main() -> None:
     bot_type = os.environ.get('BOT_TYPE', 'napcat').lower()
     
-    if bot_type == 'napcat' or True:
+    if bot_type == 'napcat':
+        bot = NapcatBot()
+    else:
         bot = NapcatBot()
 
     bot_push_scheduler = BotPushScheduler(bot)

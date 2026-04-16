@@ -2,7 +2,7 @@ import asyncio
 import os
 import logging
 import httpx
-from config import get_live_room_group_bindings
+from common.live_binding import get_live_room_group_bindings
 from model import Message
 
 
@@ -46,6 +46,7 @@ class NapcatBot:
         self.base_url = os.environ.get('NAPCAT_API_BASE_URL', 'http://127.0.0.1:3000').rstrip('/')
         self.token = os.environ.get('NAPCAT_API_TOKEN', '')
         self.room_group_bindings = get_live_room_group_bindings()
+        self.client = httpx.AsyncClient()
         
         logging.info(f"Loaded Napcat bindings for {len(self.room_group_bindings)} room(s).")
 
@@ -56,34 +57,61 @@ class NapcatBot:
             return True
             
         success = True
-        async with httpx.AsyncClient() as client:
-            headers = {
-                "Content-Type": "application/json"
-            }
-            if self.token:
-                headers["Authorization"] = f"Bearer {self.token}"
-                
-            for group_target in group_targets:
-                segments = []
-                if group_target["at_all"]:
-                    segments.append({"type": "at", "data": {"qq": "all"}})
-                if message.image:
-                    segments.append({"type": "image", "data": {"file": message.image}})
-                segments.append({"type": "text", "data": {"text": message.content[:500]}})
+        headers = {
+            "Content-Type": "application/json"
+        }
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+            
+        for group_target in group_targets:
+            segments = []
+            if group_target["at_all"]:
+                segments.append({"type": "at", "data": {"qq": "all"}})
+            if message.image:
+                segments.append({"type": "image", "data": {"file": message.image}})
+            segments.append({"type": "text", "data": {"text": message.content[:500]}})
 
-                payload = {
-                    "message_type": "group",
-                    "group_id": group_target["group_id"],
-                    "message": segments,
-                }
-                try:
-                    response = await client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
-                    if response.status_code != 200:
-                        logging.error(f"Napcat send failed: {response.status_code} {response.text}")
-                        success = False
-                except Exception as e:
-                    logging.error(f"Failed to send message to group {group_target['group_id']} for room {room_id}: {e}")
+            payload = {
+                "message_type": "group",
+                "group_id": group_target["group_id"],
+                "message": segments,
+            }
+            try:
+                response = await self.client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
+                if response.status_code != 200:
+                    logging.error(f"Napcat send failed: {response.status_code} {response.text}")
                     success = False
+            except Exception as e:
+                logging.error(f"Failed to send message to group {group_target['group_id']} for room {room_id}: {e}")
+                success = False
+        return success
+
+    async def send_group_message(self, group_id: str, message: Message) -> bool:
+        success = True
+        headers = {
+            "Content-Type": "application/json"
+        }
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+            
+        segments = []
+        if message.image:
+            segments.append({"type": "image", "data": {"file": message.image}})
+        segments.append({"type": "text", "data": {"text": message.content[:500]}})
+
+        payload = {
+            "message_type": "group",
+            "group_id": group_id,
+            "message": segments,
+        }
+        try:
+            response = await self.client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
+            if response.status_code != 200:
+                logging.error(f"Napcat send_group_message failed: {response.status_code} {response.text}")
+                success = False
+        except Exception as e:
+            logging.error(f"Failed to send message to group {group_id}: {e}")
+            success = False
         return success
 
     def run(self) -> None:
@@ -92,4 +120,5 @@ class NapcatBot:
         except KeyboardInterrupt:
             logging.info("Napcat bot stopped.")
         finally:
+            self.loop.run_until_complete(self.client.aclose())
             self.loop.close()

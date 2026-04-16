@@ -1,1 +1,1 @@
-from .apscheduler import BotPushScheduler
+from .bot_scheduler import BotPushScheduler

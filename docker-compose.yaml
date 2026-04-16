@@ -19,8 +19,8 @@ services:
     container_name: bilibili-gachi-bot
     restart: always
     environment:
-      - BOT_TYPE=napcat
-      - NAPCAT_API_BASE_URL=http://napcat:3000
+      - BOT_TYPE=${BOT_TYPE}
+      - NAPCAT_API_BASE_URL=${NAPCAT_API_BASE_URL}
       - NAPCAT_API_TOKEN=${NAPCAT_API_TOKEN}
       - BILIBILI_ROOM_GROUP_BINDINGS=${BILIBILI_ROOM_GROUP_BINDINGS}
       - CRAWL_INTERVAL_MIN=${CRAWL_INTERVAL_MIN}
@@ -30,3 +30,6 @@ services:
       - BILIBILI_API_MAX_RETRIES=${BILIBILI_API_MAX_RETRIES}
       - BILIBILI_API_RETRY_DELAY=${BILIBILI_API_RETRY_DELAY}
       - BILIBILI_BUVID3=${BILIBILI_BUVID3}
+      - DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data

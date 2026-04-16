@@ -5,3 +5,4 @@ temp.html
 *.pyc
 ntqq/
 napcat/
+*.db
