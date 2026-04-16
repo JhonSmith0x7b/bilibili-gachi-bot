@@ -30,6 +30,7 @@ services:
       - BILIBILI_API_MAX_RETRIES=${BILIBILI_API_MAX_RETRIES}
       - BILIBILI_API_RETRY_DELAY=${BILIBILI_API_RETRY_DELAY}
       - BILIBILI_BUVID3=${BILIBILI_BUVID3}
+      - MANAGER_GROUP_ID=${MANAGER_GROUP_ID}
       - DATA_DIR=/app/data
     volumes:
       - ./data:/app/data
