@@ -1,0 +1,25 @@
+name: Sync to GitLab
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出 GitHub 仓库代码
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      # 将代码推送到 GitLab
+      - name: Push to GitLab
+        env:
+          GITLAB_URL: ${{ secrets.GITLAB_URL }}
+        run: |
+          git remote set-url origin ${GITLAB_URL}
+          git push --force origin HEAD:main
