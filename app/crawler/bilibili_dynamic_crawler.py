@@ -128,7 +128,7 @@ class BilibiliDynamicCrawler:
         user_info = desc.get("user_profile", {}).get("info", {})
         uname = user_info.get("uname", "未知主播")
         
-        header = f"📡 BILI SIGNAL\n{uname} ⚡"
+        header = f"{uname} ⚡"
 
         if dyn_type == 2:
             # 图文或文本
