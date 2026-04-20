@@ -31,6 +31,14 @@ class SQLiteStorage:
                     PRIMARY KEY (room_id, live_id)
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS dynamic_session (
+                    uid TEXT,
+                    dynamic_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (uid, dynamic_id)
+                )
+            ''')
             # Attempt to add end_time column if it doesn't exist (for existing databases)
             try:
                 cursor.execute('ALTER TABLE live_session ADD COLUMN end_time INTEGER')
@@ -39,6 +47,35 @@ class SQLiteStorage:
                 pass
             conn.commit()
             logging.info(f"SQLite storage initialized at {self.db_path}")
+
+    def get_dynamic(self, uid: str, dynamic_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT * FROM dynamic_session WHERE uid = ? AND dynamic_id = ?', 
+                    (uid, dynamic_id)
+                )
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logging.error(f"Error fetching dynamic for uid {uid}: {e}")
+            return None
+
+    def create_dynamic(self, uid: str, dynamic_id: str):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO dynamic_session (uid, dynamic_id)
+                    VALUES (?, ?)
+                ''', (uid, dynamic_id))
+                conn.commit()
+        except sqlite3.IntegrityError:
+            pass
+        except Exception as e:
+            logging.error(f"Error creating dynamic record for uid {uid}: {e}")
 
     def get_session(self, room_id: str, live_id: str) -> Optional[Dict[str, Any]]:
         try:

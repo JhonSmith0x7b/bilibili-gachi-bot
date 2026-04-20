@@ -179,7 +179,9 @@ class BilibiliApiCrawler:
             msg += f"链接: https://live.bilibili.com/{room_id}\n"
             message.content = msg
             if cover:
-                message.image = cover
+                if cover.startswith("//"):
+                    cover = "https:" + cover
+                message.images = [cover]
             return message
         except Exception as e:
             logging.warning(f"Error parsing live info model: {e}")

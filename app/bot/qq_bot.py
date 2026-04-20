@@ -2,8 +2,8 @@ import asyncio
 import os
 import logging
 import httpx
-from common.live_binding import get_live_room_group_bindings
 from model import Message
+from common.image_utils import process_image_for_bot
 
 
 class NapcatJobQueue:
@@ -45,59 +45,40 @@ class NapcatBot:
         self.app = MockApp(self.loop)   
         self.base_url = os.environ.get('NAPCAT_API_BASE_URL', 'http://127.0.0.1:3000').rstrip('/')
         self.token = os.environ.get('NAPCAT_API_TOKEN', '')
-        self.room_group_bindings = get_live_room_group_bindings()
         self.client = httpx.AsyncClient()
         
-        logging.info(f"Loaded Napcat bindings for {len(self.room_group_bindings)} room(s).")
+        logging.info(f"Initialized Napcat bot.")
 
-    async def send_push_message(self, room_id: str, message: Message) -> bool:
-        group_targets = self.room_group_bindings.get(room_id, [])
-        if not group_targets:
-            logging.warning(f"No bound Napcat group IDs configured for room {room_id}. Skipping push message.")
-            return True
-            
+    async def send_group_message(self, group_id: str, message: Message, at_all: bool = False) -> bool:
         success = True
         headers = {
             "Content-Type": "application/json"
         }
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-            
-        for group_target in group_targets:
-            segments = []
-            if group_target["at_all"]:
-                segments.append({"type": "at", "data": {"qq": "all"}})
-            if message.image:
-                segments.append({"type": "image", "data": {"file": message.image}})
-            segments.append({"type": "text", "data": {"text": message.content[:500]}})
 
-            payload = {
-                "message_type": "group",
-                "group_id": group_target["group_id"],
-                "message": segments,
-            }
-            try:
-                response = await self.client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
-                if response.status_code != 200:
-                    logging.error(f"Napcat send failed: {response.status_code} {response.text}")
-                    success = False
-            except Exception as e:
-                logging.error(f"Failed to send message to group {group_target['group_id']} for room {room_id}: {e}")
-                success = False
-            await asyncio.sleep(2)
-        return success
-
-    async def send_group_message(self, group_id: str, message: Message) -> bool:
-        success = True
-        headers = {
-            "Content-Type": "application/json"
-        }
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-            
         segments = []
+        if at_all:
+            segments.append({"type": "at", "data": {"qq": "all"}})
+        
+        # Original single image support (Backward compatibility)
         if message.image:
-            segments.append({"type": "image", "data": {"file": message.image}})
+            if message.image.startswith("http"):
+                processed_image = await process_image_for_bot(message.image)
+                segments.append({"type": "image", "data": {"file": processed_image}})
+            else:
+                segments.append({"type": "image", "data": {"file": message.image}})
+        
+        # New multi-image support
+        if hasattr(message, "images") and message.images:
+            for img_url in message.images:
+                if not img_url: continue
+                if img_url.startswith("http"):
+                    processed_image = await process_image_for_bot(img_url)
+                    segments.append({"type": "image", "data": {"file": processed_image}})
+                else:
+                    segments.append({"type": "image", "data": {"file": img_url}})
+
         segments.append({"type": "text", "data": {"text": message.content[:500]}})
 
         payload = {
@@ -105,6 +86,7 @@ class NapcatBot:
             "group_id": group_id,
             "message": segments,
         }
+
         try:
             response = await self.client.post(f"{self.base_url}/send_msg", json=payload, headers=headers)
             if response.status_code != 200:
