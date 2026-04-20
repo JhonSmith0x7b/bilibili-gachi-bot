@@ -147,15 +147,15 @@ class BilibiliDynamicCrawler:
             title = card_content.get("title", "")
             bvid = desc.get("bvid", "")
             video_url = f"https://www.bilibili.com/video/{bvid}" if bvid else "无链接"
-            text = f"{header} 新视频!!!\n标题: {title}\n链接: {video_url}\n"
+            text = f"{header}\n新视频!!!\n标题: {title}\n链接: {video_url}\n"
         elif dyn_type == 64:
             # 专栏投稿
             title = card_content.get("title", "").strip()
             article_id = card_content.get("id")
             article_url = f"https://www.bilibili.com/read/cv{article_id}" if article_id else "无链接"
-            text = f"{header} 新专栏!!!\n标题: {title}\n链接: {article_url}\n"
+            text = f"{header}\n新专栏!!!\n标题: {title}\n链接: {article_url}\n"
         else:
-            text = f"{header} 新什么!!!\n请点击链接查看详情"
+            text = f"{header}\n新什么!!!\n请点击链接查看详情\n"
         text += f"\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n🔗动态详情: {dynamic_url}"
         message.content = text
         if images:
