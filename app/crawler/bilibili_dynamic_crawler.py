@@ -8,6 +8,7 @@ from curl_cffi.requests import AsyncSession
 from common.dynamic_binding import get_dynamic_uid_group_bindings
 from common.storage import SQLiteStorage
 from model import Message
+import re
 
 
 class BilibiliDynamicCrawler:
@@ -157,6 +158,7 @@ class BilibiliDynamicCrawler:
         else:
             text = f"{header}\n新什么!!!\n请点击链接查看详情\n"
         text += f"\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n🔗动态详情: {dynamic_url}"
+        text = re.sub(r'\[[^\]]+\]', '', text)
         message.content = text
         if images:
             message.images = images
@@ -202,4 +204,5 @@ class BilibiliDynamicCrawler:
                 if img.startswith("//"):
                     img = "https:" + img
                 res.append(img)
+                break
         return res
