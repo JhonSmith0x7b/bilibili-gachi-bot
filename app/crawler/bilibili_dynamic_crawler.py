@@ -158,7 +158,7 @@ class BilibiliDynamicCrawler:
         else:
             text = f"{header}\n新什么!!!\n请点击链接查看详情\n"
         text += f"\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n🔗动态详情: {dynamic_url}"
-        text = re.sub(r'\[[^\]]+\]', '', text)
+        text = re.sub(r'\[[^\]]+\]', ' ', text)
         message.content = text
         if images:
             message.images = images
