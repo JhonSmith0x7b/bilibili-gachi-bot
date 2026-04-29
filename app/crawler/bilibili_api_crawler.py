@@ -19,6 +19,7 @@ class BilibiliApiCrawler:
         self.max_retries = int(os.environ.get("BILIBILI_API_MAX_RETRIES", "3"))
         self.retry_base_delay = float(os.environ.get("BILIBILI_API_RETRY_DELAY", "1"))
         self.credential = Credential(
+            sessdata = os.environ.get("BILIBILI_SESSDATA", ""),
             buvid3 = os.environ.get("BILIBILI_BUVID3", "96F51D3A-AF11-5C4F-9ECE-A1F42BD2509117059infoc")
             )
         
