@@ -43,9 +43,9 @@ class BilibiliDynamicCrawler:
             
         for i, uid in enumerate(self.uids):
             try:
-                # Small stagger
+                # Stagger to protect from rate limits / anti-crawler
                 if i > 0:
-                    await asyncio.sleep(random.uniform(1, 3))
+                    await asyncio.sleep(random.uniform(8, 12))
                 
                 u = user.User(uid=int(uid), credential=self.credential)
                 res = await u.get_dynamics_new()
@@ -68,9 +68,9 @@ class BilibiliDynamicCrawler:
         results = []
         for i, uid in enumerate(self.uids):
             try:
-                # Small stagger
+                # Stagger to protect from rate limits / anti-crawler
                 if i > 0:
-                    await asyncio.sleep(random.uniform(1, 3))
+                    await asyncio.sleep(random.uniform(8, 12))
                 
                 u = user.User(uid=int(uid), credential=self.credential)
                 res = await u.get_dynamics_new()
