@@ -10,6 +10,8 @@ from bilibili_api import user, Credential
 from common.dynamic_binding import get_dynamic_uid_group_bindings
 from common.storage import SQLiteStorage
 from model import Message
+from common.credential import CredentialManager
+
 
 
 class BilibiliDynamicCrawler:
@@ -17,15 +19,18 @@ class BilibiliDynamicCrawler:
         self.uid_group_bindings = get_dynamic_uid_group_bindings()
         self.uids = list(self.uid_group_bindings.keys())
         
-        # Priority to DYNAMIC specific variables, fall back to default BILIBILI variables
-        sessdata = os.environ.get("BILIBILI_DYNAMIC_SESSDATA") or os.environ.get("BILIBILI_SESSDATA", "")
-        buvid3 = os.environ.get("BILIBILI_DYNAMIC_BUVID3") or os.environ.get("BILIBILI_BUVID3", "")
-        self.credential = Credential(sessdata=sessdata, buvid3=buvid3)
-        
         self.request_timeout = float(os.environ.get("BILIBILI_API_TIMEOUT", "15.0"))
+        self.max_retries = int(os.environ.get("BILIBILI_API_MAX_RETRIES", "3"))
+        self.retry_base_delay = float(os.environ.get("BILIBILI_API_RETRY_DELAY", "2"))
         
         db_path = os.path.join(os.environ.get("DATA_DIR", "./data"), "bilibili_bot.db")
         self.storage = SQLiteStorage(db_path=db_path)
+        
+        sessdata_key = "BILIBILI_DYNAMIC_SESSDATA" if os.environ.get("BILIBILI_DYNAMIC_SESSDATA", "").strip() else "BILIBILI_SESSDATA"
+        buvid3_key = "BILIBILI_DYNAMIC_BUVID3" if os.environ.get("BILIBILI_DYNAMIC_BUVID3", "").strip() else "BILIBILI_BUVID3"
+        self.cred_manager = CredentialManager(storage=self.storage, env_key=sessdata_key, buvid3_key=buvid3_key)
+        self.credential = self.cred_manager.get_credential()
+
         
         from bilibili_api import select_client, request_settings
         select_client("curl_cffi")
@@ -42,23 +47,33 @@ class BilibiliDynamicCrawler:
             return
             
         for i, uid in enumerate(self.uids):
-            try:
-                # Stagger to protect from rate limits / anti-crawler
-                if i > 0:
-                    await asyncio.sleep(random.uniform(8, 12))
-                
-                u = user.User(uid=int(uid), credential=self.credential)
-                res = await u.get_dynamics_new()
-                cards = res.get("items", [])
-                
-                for card_info in cards[:3]:
-                    dynamic_id = card_info.get("id_str")
-                    if dynamic_id and not self.storage.get_dynamic(uid, dynamic_id):
-                        self.storage.create_dynamic(uid, dynamic_id)
-                        logging.info(f"Marked existing dynamic {dynamic_id} for UID {uid} during init.")
-                        
-            except Exception as e:
-                logging.error(f"Error initializing dynamic state for UID {uid}: {e}")
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    # Stagger to protect from rate limits / anti-crawler
+                    if i > 0 and attempt == 1:
+                        await asyncio.sleep(random.uniform(8, 12))
+                    
+                    attempt_index = self.cred_manager.current_index
+                    self.credential = self.cred_manager.get_credential()
+                    u = user.User(uid=int(uid), credential=self.credential)
+                    res = await u.get_dynamics_new()
+                    cards = res.get("items", [])
+                    
+                    for card_info in cards[:3]:
+                        dynamic_id = card_info.get("id_str")
+                        if dynamic_id and not self.storage.get_dynamic(uid, dynamic_id):
+                            self.storage.create_dynamic(uid, dynamic_id)
+                            logging.info(f"Marked existing dynamic {dynamic_id} for UID {uid} during init.")
+                    break
+                except Exception as e:
+                    self.credential = self.cred_manager.rotate(attempt_index)
+                    if attempt >= self.max_retries:
+                        logging.error(f"❌【动态初始化拉取失败】UID {uid} 连续重试 {attempt} 次及自动切换凭证后仍无法获取: {e}。已终止初始化！")
+                        break
+                    delay = self.retry_base_delay * attempt
+                    logging.warning(f"⚠️【动态接口初始化异常】UID {uid} 请求报错 (尝试 {attempt}/{self.max_retries}): {e}。已触发 SESSDATA 切换，将在 {delay:.1f} 秒后使用新凭证重试！")
+                    await asyncio.sleep(delay)
+
         logging.info("BilibiliDynamicCrawler cache initialized.")
 
     async def get_new(self) -> List[Tuple[str, Message]]:
@@ -67,38 +82,48 @@ class BilibiliDynamicCrawler:
 
         results = []
         for i, uid in enumerate(self.uids):
-            try:
-                # Stagger to protect from rate limits / anti-crawler
-                if i > 0:
-                    await asyncio.sleep(random.uniform(8, 12))
-                
-                u = user.User(uid=int(uid), credential=self.credential)
-                res = await u.get_dynamics_new()
-                cards = res.get("items", [])
-                
-                if not cards:
-                    continue
-                
-                # Check top 3 to be safe, reversed (from oldest to newest)
-                for card_info in reversed(cards[:3]):
-                    dynamic_id = card_info.get("id_str")
-                    if not dynamic_id:
-                        continue
-                        
-                    # Check if already processed
-                    if self.storage.get_dynamic(uid, dynamic_id):
-                        continue
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    # Stagger to protect from rate limits / anti-crawler
+                    if i > 0 and attempt == 1:
+                        await asyncio.sleep(random.uniform(8, 12))
                     
-                    message = self._parse_dynamic(card_info)
+                    attempt_index = self.cred_manager.current_index
+                    self.credential = self.cred_manager.get_credential()
+                    u = user.User(uid=int(uid), credential=self.credential)
+                    res = await u.get_dynamics_new()
+                    cards = res.get("items", [])
                     
-                    if message:
-                        results.append((uid, message))
-                        # Save to DB to prevent double push
-                        self.storage.create_dynamic(uid, dynamic_id)
-                        logging.info(f"New dynamic detected for UID {uid}: {dynamic_id}")
+                    if not cards:
+                        break
+                    
+                    # Check top 3 to be safe, reversed (from oldest to newest)
+                    for card_info in reversed(cards[:3]):
+                        dynamic_id = card_info.get("id_str")
+                        if not dynamic_id:
+                            continue
+                            
+                        # Check if already processed
+                        if self.storage.get_dynamic(uid, dynamic_id):
+                            continue
                         
-            except Exception as e:
-                logging.error(f"Error fetching dynamic for UID {uid}: {e}")
+                        message = self._parse_dynamic(card_info)
+                        
+                        if message:
+                            results.append((uid, message))
+                            # Save to DB to prevent double push
+                            self.storage.create_dynamic(uid, dynamic_id)
+                            logging.info(f"New dynamic detected for UID {uid}: {dynamic_id}")
+                    break
+                except Exception as e:
+                    self.credential = self.cred_manager.rotate(attempt_index)
+                    if attempt >= self.max_retries:
+                        logging.error(f"❌【动态监控拉取失败】UID {uid} 连续重试 {attempt} 次及自动切换凭证后仍无法成功请求: {e}。已终止当前重试循环！")
+                        break
+                    delay = self.retry_base_delay * attempt
+                    logging.warning(f"⚠️【动态更新拉取异常】UID {uid} 请求报错 (尝试 {attempt}/{self.max_retries}): {e}。已触发 SESSDATA 轮询切换，将在 {delay:.1f} 秒后使用新凭证重试！")
+                    await asyncio.sleep(delay)
+
                 
         return results
 

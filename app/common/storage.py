@@ -39,6 +39,13 @@ class SQLiteStorage:
                     PRIMARY KEY (uid, dynamic_id)
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS system_config (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
             # Attempt to add end_time column if it doesn't exist (for existing databases)
             try:
                 cursor.execute('ALTER TABLE live_session ADD COLUMN end_time INTEGER')
@@ -149,3 +156,28 @@ class SQLiteStorage:
         except Exception as e:
             logging.error(f"Error incrementing retry for room {room_id}: {e}")
             return 0
+
+    def get_config(self, key: str) -> Optional[str]:
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT value FROM system_config WHERE key = ?', (key,))
+                row = cursor.fetchone()
+                return row[0] if row else None
+        except Exception as e:
+            logging.error(f"Error fetching config for key {key}: {e}")
+            return None
+
+    def set_config(self, key: str, value: str):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO system_config (key, value, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
+                ''', (key, str(value)))
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error setting config for key {key}: {e}")
+

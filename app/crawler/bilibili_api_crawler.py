@@ -9,6 +9,8 @@ from bilibili_api import live, Credential
 from common.live_binding import get_live_room_group_bindings
 from model import BilibiliLiveRoomData, Message
 from common.storage import SQLiteStorage
+from common.credential import CredentialManager
+
 
 
 class BilibiliApiCrawler:
@@ -18,13 +20,11 @@ class BilibiliApiCrawler:
         self.request_timeout = float(os.environ.get("BILIBILI_API_TIMEOUT", "6"))
         self.max_retries = int(os.environ.get("BILIBILI_API_MAX_RETRIES", "3"))
         self.retry_base_delay = float(os.environ.get("BILIBILI_API_RETRY_DELAY", "1"))
-        self.credential = Credential(
-            sessdata = os.environ.get("BILIBILI_SESSDATA", ""),
-            buvid3 = os.environ.get("BILIBILI_BUVID3", "96F51D3A-AF11-5C4F-9ECE-A1F42BD2509117059infoc")
-            )
-        
         db_path = os.path.join(os.environ.get("DATA_DIR", "./data"), "bilibili_bot.db")
         self.storage = SQLiteStorage(db_path=db_path)
+        self.cred_manager = CredentialManager(storage=self.storage, env_key="BILIBILI_SESSDATA", buvid3_key="BILIBILI_BUVID3")
+        self.credential = self.cred_manager.get_credential()
+
 
         if not self.bilibili_room_ids:
             error = "No Bilibili room bindings configured."
@@ -143,23 +143,30 @@ class BilibiliApiCrawler:
     async def fetch_live_room_info(self, room_id: str) -> Optional[BilibiliLiveRoomData]:
         for attempt in range(1, self.max_retries + 1):
             try:
+                attempt_index = self.cred_manager.current_index
+                self.credential = self.cred_manager.get_credential()
                 live_object = live.LiveRoom(room_id, self.credential)
                 raw_data = await live_object.get_room_info()
                 return BilibiliLiveRoomData.model_validate(raw_data)
             except Exception as e:
+                # Rotate credential on error so next attempt or future runs use the backup SESSDATA
+                self.credential = self.cred_manager.rotate(attempt_index)
+                
                 if attempt >= self.max_retries:
                     logging.error(
-                        f"Request failed for room {room_id} after {attempt} attempts: {e}"
+                        f"❌【直播监控拉取失败】直播间 {room_id} 连续重试 {attempt} 次及自动切换凭证后仍无法成功请求: {e}。已终止当前重试循环！"
                     )
                     break
 
                 delay = self.retry_base_delay * attempt
                 logging.warning(
-                    f"Request failed for room {room_id} on attempt {attempt}/{self.max_retries}: {e}. "
-                    f"Retrying in {delay:.1f}s."
+                    f"⚠️【直播接口调用报错】直播间 {room_id} 请求异常 (尝试 {attempt}/{self.max_retries}): {e}。"
+                    f"已触发 SESSDATA 轮询切换，将在 {delay:.1f} 秒后使用新凭证重试！"
                 )
                 await asyncio.sleep(delay)
+
         return None
+
 
     def parse_live_info(self, data: BilibiliLiveRoomData) -> Optional[Message]:
         try:
