@@ -1,0 +1,19 @@
+name: napcat-assistant
+services:
+  assistant:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data:ro
+    networks:
+      - napcat
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+networks:
+  napcat:
+    external: true
+    name: ${NAPCAT_DOCKER_NETWORK:-napcat_default}

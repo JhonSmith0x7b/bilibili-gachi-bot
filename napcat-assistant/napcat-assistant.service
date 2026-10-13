@@ -1,0 +1,17 @@
+[Unit]
+Description=NapCat group command assistant
+After=docker.service napcat.service
+Requires=docker.service
+Wants=napcat.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/bilibili-gachi-bot/napcat-assistant
+Restart=on-failure
+RestartSec=5
+ExecStart=/usr/bin/docker compose -f /root/bilibili-gachi-bot/napcat-assistant/compose.yaml up --no-build
+ExecStop=/usr/bin/docker compose -f /root/bilibili-gachi-bot/napcat-assistant/compose.yaml stop
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target
